@@ -1,0 +1,69 @@
+[project]
+name = "mkdocs-eds"
+description = "Collection of MkDocs plugins"
+authors = [
+    { name = "Perceval Wajsburt", email = "perceval.wajsburt@gmail.com" }
+]
+readme = "README.md"
+license = { file = "LICENSE" }
+urls.homepage = "https://github.com/perceval/mkdocs-eds/"
+urls.repository = "https://github.com/perceval/mkdocs-eds/"
+dynamic = ["version"]
+requires-python = ">=3.7,<4.0,!=3.8.1"
+dependencies = [
+    "astunparse",
+    "beautifulsoup4",
+    "griffe",
+    "html5lib",
+    "jedi",
+    "mkdocs",
+    "mkdocs-autorefs @ git+https://github.com/percevalw/mkdocs-autorefs.git@main#egg=mkdocs-autorefs",
+    "pybtex~=0.24.0",
+]
+
+[project.entry-points."mkdocs.plugins"]
+"auto_gen_pages" = "mkdocs_eds.auto_gen_pages:AutoGenPagesPlugin"
+"bibtex" = "mkdocs_eds.bibtex:BibTexPlugin"
+"clickable_snippets" = "mkdocs_eds.clickable_snippets:ClickableSnippetsPlugin"
+"link_sources" = "mkdocs_eds.link_sources:LinkSourcesPlugin"
+"pret_snippet_renderer" = "mkdocs_eds.pret_snippet_renderer:PretSnippetRendererPlugin"
+
+[tool.ruff]
+fix = true
+exclude = [
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".venv",
+    "__init__.py",
+    "__pycache__",
+    "build",
+]
+line-length = 88
+lint.select = [
+    "E",
+    "F",
+    "W",
+    "I001"
+]
+lint.fixable = ["E", "F", "W", "I"]
+
+[tool.ruff.lint.extend-per-file-ignores]
+# Also ignore `E402` in all `__init__.py` files.
+"__init__.py" = ["E402", "F401"]
+
+[tool.hatch.version]
+path = "mkdocs_eds/__init__.py"
+
+[build-system]
+requires = ["hatchling", "pip<=24.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+artifacts = ["mkdocs_eds"]
+
+[tool.hatch.envs.ci]
+detached = true
+
+[tool.hatch.metadata]
+allow-direct-references = true
