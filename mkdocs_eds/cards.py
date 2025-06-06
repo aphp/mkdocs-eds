@@ -4,10 +4,16 @@ Copied from https://github.com/aphp/edsnlp/blob/8e9ed84f56e6af741023e8b3a9de38ba
 
 import re
 import xml.etree.ElementTree as etree
+from pathlib import Path
+from typing import Optional
 
 from markdown import Extension
 from markdown.blockprocessors import BlockProcessor
 from markdown.extensions.attr_list import AttrListTreeprocessor, get_attrs
+from mkdocs import utils
+from mkdocs.config import config_options
+from mkdocs.config.defaults import MkDocsConfig
+from mkdocs.plugins import BasePlugin
 
 
 def assign_attrs(elem, attrs):
@@ -275,3 +281,30 @@ def makeExtension(*args, **kwargs):
     """Return extension."""
 
     return CardExtension(*args, **kwargs)
+
+
+class MkdocsCardsPlugin(BasePlugin):
+    """Plugin to load cards extension and copy CSS (easier than remembering
+    to add the two in mkdocs.yml config file)."""
+
+    config_scheme = (
+        ("slugify", config_options.Type(str, default=None)),
+        ("combine_header_slug", config_options.Type(bool, default=False)),
+        ("separator", config_options.Type(str, default="-")),
+    )
+
+    def on_config(self, config: "MkDocsConfig") -> Optional["MkDocsConfig"]:
+        if "cards.css" not in config["extra_css"]:
+            config["extra_css"].append("cards.css")
+        if "mkdocs_eds.cards" not in config["markdown_extensions"]:
+            config["markdown_extensions"].append("mkdocs_eds.cards")
+        md_config = config["mdx_configs"].setdefault("mkdocs_eds.cards", {})
+        config["mdx_configs"]["cards"] = {**self.config, **md_config}
+        return config
+
+    def on_post_build(self, *, config: "MkDocsConfig") -> None:
+        output_base_path = Path(config["site_dir"])
+        base_path = Path(__file__).parent.parent / "assets" / "stylesheets"
+        from_path = base_path / "cards.css"
+        to_path = output_base_path / "cards.css"
+        utils.copy_file(str(from_path), str(to_path))

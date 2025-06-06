@@ -6,7 +6,6 @@ https://github.com/aphp/edsnlp/blob/8e9ed84f56e6af741023e8b3a9de38ba93912953/doc
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List
 
 from mkdocs.config import Config
 from mkdocs.config import config_options as opt
@@ -22,9 +21,9 @@ REFERENCE_TEMPLATE = """\
 """
 
 
-class AutoGenPages(BasePlugin):
+class AutoGenPagesPlugin(BasePlugin):
     config_scheme = (
-        ("package_dirs", opt.Type(List[str])),
+        ("package_dirs", opt.Type(list)),
         ("reference_section", opt.Type(str, default="Reference")),
         ("exclude_glob", opt.Type(str, default="assets/fragments/*")),
         ("reference_template", opt.Type(str, default=REFERENCE_TEMPLATE)),
@@ -46,18 +45,22 @@ class AutoGenPages(BasePlugin):
         # the user might have in `mkdocs.yml` with the detailed nested list
         # produced above.
         for item in config["nav"]:
-            if isinstance(item, dict):
-                key = next(iter(item))
-                if item[key].strip("/") == "reference":
-                    item[key] = self._reference_nav
+            print("NAV", item)
+            if not isinstance(item, dict):
+                continue
+            key = next(iter(item))
+            if not isinstance(item[key], str):
+                continue
+            if item[key].strip("/") == "reference":
+                item[key] = self._reference_nav
 
         # Copy files specified in `copy_files` to the virtual files dict.
         for dest, source in self.config["copy_files"].items():
             source_path = Path(source).resolve()
             if not source_path.exists():
                 raise ValueError(f"Source file {source} does not exist.")
-            dest_path = Path(dest).resolve()
-            self._virtual_files[str(dest_path)] = source_path.read_text()
+            # dest is relative to the docs_dir
+            self._virtual_files[str(dest.lstrip("/"))] = source_path.read_text()
 
         # Filter out files that match the exclude_glob pattern
         new_files = [

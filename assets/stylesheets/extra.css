@@ -1,0 +1,101 @@
+:root {
+    --md-code-font: Consolas, Roboto Mono, Roboto;
+    --md-code-bg-color: rgba(175, 184, 193, .2);
+    --md-typeset-color: #24292e;
+    --md-sidebar-width: 21rem;
+}
+
+.md-typeset h1, .md-typeset h2, .md-typeset h3, .md-typeset h4, .md-typeset h5, .md-typeset h6 {
+    word-wrap: normal;
+    color: var(--md-typeset-color);
+    font-weight: 600;
+    scroll-margin-top: 1.5625rem;
+    letter-spacing: 0;
+}
+
+.md-typeset h1 {
+    border-bottom: 1px solid #d8dee4;
+}
+
+.md-nav {
+    font-size: 1rem;
+}
+
+.md-typeset code {
+    font-size: 0.95em;
+}
+
+.md-typeset pre > code, .highlighttable .linenos {
+    font-size: .9375rem;
+}
+
+
+.md-typeset :is(.admonition,details) {
+    font-size: inherit !important;
+}
+
+.highlight span.filename, .quote > summary {
+    font-size: 0.85em;
+    padding-top: 0.3em;
+    padding-bottom: 0.3em;
+}
+
+.md-typeset pre > code, .highlight span.filename {
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+}
+
+.md-typeset pre > code {
+    border-bottom-left-radius: 5px;
+    border-bottom-right-radius: 5px;
+}
+
+.md-main__inner {
+    margin-top: 0;
+}
+
+.md-typeset__table td > a {
+    white-space: nowrap;
+}
+
+@media screen and (min-width: 76.1875em) {
+    .md-sidebar {
+        margin-top: 1.875rem;
+    }
+}
+
+@media screen and (min-width: 60em) {
+    .md-nav--secondary .md-nav__title {
+        background: var(--md-main-bg) !important;
+        box-shadow: 0 0 0.5rem 0.5rem var(--md-main-bg) !important;
+    }
+}
+
+@media screen and (min-width: 76.25em) {
+    .md-nav--primary .md-nav__title, .md-nav--secondary .md-nav__title, .md-nav--lifted > .md-nav__list > .md-nav__item--active > .md-nav__link {
+        background: var(--md-main-bg) !important;
+        box-shadow: 0 0 0.5rem 0.5rem var(--md-main-bg) !important;
+    }
+}
+
+.md-content {
+    background: var(--md-default-bg-color);
+    contain: paint;
+}
+
+.md-main {
+    background: var(--md-main-bg);
+}
+
+.md-content__inner {
+    margin-top: 1.875rem;
+}
+
+.doc td > code {
+    word-break: normal;
+}
+
+.md-typeset .compact-table.md-typeset__table th, .md-typeset .compact-table.md-typeset__table td {
+    min-width: initial !important;
+    padding: .5em 0.75em;
+}

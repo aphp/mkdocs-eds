@@ -1,32 +1,34 @@
-# Based on https://github.com/darwindarak/mdx_bib
+from __future__ import annotations
+
 import os
+import re
 from bisect import bisect_right
 from collections import defaultdict
+from pathlib import Path
 from typing import Tuple
 
 import jedi
+import mkdocs.plugins
 import mkdocs.structure.pages
 import parso
 import regex
-from docs.scripts.autorefs.plugin import AutorefsPlugin
-from mkdocs.config.config_options import Type as MkType
+from bs4 import BeautifulSoup
+from mkdocs import utils
+from mkdocs.config import Config
+from mkdocs.config import config_options as opt
 from mkdocs.config.defaults import MkDocsConfig
 from mkdocs.plugins import BasePlugin
+from mkdocs_autorefs.plugin import AutorefsPlugin
 
 try:
     from importlib.metadata import entry_points
 except ImportError:
     from importlib_metadata import entry_points
 
-
-from bs4 import BeautifulSoup
-
-# Used to match href in HTML to replace with a relative path
 HREF_REGEX = (
     r"(?<=<\s*(?:a[^>]*href|img[^>]*src)=)"
     r'(?:"([^"]*)"|\'([^\']*)|[ ]*([^ =>]*)(?![a-z]+=))'
 )
-# Maybe find something less specific ?
 PIPE_REGEX = r"(?<![a-zA-Z0-9._-])eds[.]([a-zA-Z0-9._-]*)(?![a-zA-Z0-9._-])"
 
 HTML_PIPE_REGEX = r"""(?x)
@@ -49,8 +51,16 @@ REGISTRY_REGEX = r"""(?x)
 CITATION_RE = r"(\[@(?:[\w_:-]+)(?: *, *@(?:[\w_:-]+))*\])"
 
 
-class ClickableSnippetsPlugin(BasePlugin):
-    config_scheme: Tuple[Tuple[str, MkType]] = ()
+class ClickableCodePlugin(BasePlugin):
+    """
+    A MkDocs plugin that adds source links (e.g. GitHub links) to headings in
+    the documentation.
+    """
+
+    config_scheme = (
+        ("repo_url", opt.Type(str, default=None)),
+        ("pattern", opt.Type(str, default=None)),
+    )
 
     @mkdocs.plugins.event_priority(1000)
     def on_config(self, config: MkDocsConfig):
@@ -64,12 +74,23 @@ class ClickableSnippetsPlugin(BasePlugin):
         config.plugins["autorefs"] = plugin
         config["plugins"]["autorefs"] = plugin
         plugin.load_config(plugin_config)
+        if "clickable-code.css" not in config["extra_css"]:
+            config["extra_css"].append("clickable-code.css")
+        self._commit = os.popen("git rev-parse --short HEAD").read().strip()
+        return config
+
+    def on_post_build(self, *, config: "MkDocsConfig") -> None:
+        output_base_path = Path(config["site_dir"])
+        base_path = Path(__file__).parent.parent / "assets" / "stylesheets"
+        from_path = base_path / "clickable-code.css"
+        to_path = output_base_path / "clickable-code.css"
+        utils.copy_file(str(from_path), str(to_path))
 
     @classmethod
     def get_ep_namespace(cls, ep, namespace=None):
         if hasattr(ep, "select"):
             return ep.select(group=namespace) if namespace else list(ep._all)
-        else:  # dict
+        else:
             return (
                 ep.get(namespace, [])
                 if namespace
@@ -78,27 +99,20 @@ class ClickableSnippetsPlugin(BasePlugin):
 
     @mkdocs.plugins.event_priority(-1000)
     def on_post_page(
-        self,
-        output: str,
-        page: mkdocs.structure.pages.Page,
-        config: mkdocs.config.Config,
+        self, output: str, page: mkdocs.structure.pages.Page, config: Config
     ):
         """
         1. Replace absolute paths with path relative to the rendered page
            This must be performed after all other plugins have run.
         2. Replace component names with links to the component reference
-
         Parameters
         ----------
         output
         page
         config
-
         Returns
         -------
-
         """
-
         autorefs: AutorefsPlugin = config["plugins"]["autorefs"]
         ep = entry_points()
         page_url = os.path.join("/", page.file.url)
@@ -115,9 +129,6 @@ class ClickableSnippetsPlugin(BasePlugin):
                 group = ep.group.split("_", 1)[1]
                 all_entry_points[group][ep.name] = ep.value
 
-        # This method is meant for replacing any component that
-        # appears in a "eds.component" format, no matter if it is
-        # preceded by a "@factory" or not.
         def replace_factory_component(match):
             full_match = match.group(0)
             name = "eds." + match.group(1)
@@ -125,15 +136,13 @@ class ClickableSnippetsPlugin(BasePlugin):
             preceding = output[match.start(0) - 50 : match.start(0)]
             if ep is not None and "DEFAULT:" not in preceding:
                 try:
-                    url = autorefs.get_item_url(ep.replace(":", "."))
+                    url = autorefs.get_item_url(ep.replace(":", "."))[0]
                 except KeyError:
                     pass
                 else:
                     return f"<a href={url}>{name}</a>"
             return full_match
 
-        # This method is meant for replacing any component that
-        # appears in a "@registry": "component" format
         def replace_any_registry_component(match):
             full_match = match.group(0)
             group = match.group(1)
@@ -142,11 +151,11 @@ class ClickableSnippetsPlugin(BasePlugin):
             preceding = output[match.start(0) - 50 : match.start(0)]
             if ep is not None and "DEFAULT:" not in preceding:
                 try:
-                    url = autorefs.get_item_url(ep.replace(":", "."))
+                    url = autorefs.get_item_url(ep.replace(":", "."))[0]
                 except KeyError:
                     pass
                 else:
-                    repl = f'<a href={url} class="discrete-link">{name}</a>'
+                    repl = f'<a href={url} class="clickable-discrete-link">{name}</a>'
                     before = full_match[: match.start(2) - match.start(0)]
                     after = full_match[match.end(2) - match.start(0) :]
                     return before + repl + after
@@ -165,10 +174,7 @@ class ClickableSnippetsPlugin(BasePlugin):
         all_snippets = ""
         all_offsets = []
         all_nodes = []
-
         soups = []
-
-        # Replace absolute paths with path relative to the rendered page
         for match in regex.finditer("<code>.*?</code>", output, flags=regex.DOTALL):
             node = match.group(0)
             if "\n" in node:
@@ -192,40 +198,76 @@ class ClickableSnippetsPlugin(BasePlugin):
                 line, col = name.start_pos
                 offset = line_lengths[line - 1] + col
                 node_idx = bisect_right(all_offsets, offset) - 1
-
                 node = all_nodes[node_idx]
                 gotos = interpreter.goto(line, col, follow_imports=True)
                 gotos = [
                     goto
                     for goto in gotos
-                    if (
-                        goto
-                        and goto.full_name
-                        and goto.full_name.startswith("pret")
-                        and goto.type != "module"
-                    )
+                    if goto
+                    and goto.full_name
+                    and goto.full_name.startswith("pret")
+                    and goto.type != "module"
                 ]
                 goto = gotos[0] if gotos else None
                 if goto:
-                    url = autorefs.get_item_url(goto.full_name)
-                    # Check if node has no link in its upstream ancestors
+                    url = autorefs.get_item_url(goto.full_name)[0]
                     if not node.find_parents("a"):
                         node.replace_with(
                             BeautifulSoup(
-                                f'<a class="discrete-link" href="{url}">{node}</a>',
+                                f'<a class="clickable-discrete-link" href="{url}">{node}</a>',  # noqa: E501
                                 "html5lib",
                             )
                         )
             except Exception:
                 pass
 
-        # Re-insert soups into the output
         for soup, start, end in reversed(soups):
             output = output[:start] + str(soup.find("code")) + output[end:]
 
         output = regex.sub(HREF_REGEX, replace_link, output)
 
-        return output
+        soup = BeautifulSoup(output, "html.parser")
+        for heading in soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6"]):
+            ident = heading.get("id", "")
+            if (
+                self.config["pattern"] and not re.match(self.config["pattern"], ident)
+            ) or "--" in ident:
+                continue
+            if "." not in ident:
+                continue
+            package = ident.split(".")[0]
+            interpreter = jedi.Interpreter(
+                f"import {package}; {ident}", namespaces=[{}]
+            )
+            inference = interpreter.infer(1, len(f"import {package}; {ident}"))
+            if not inference:
+                continue
+            try:
+                file_path = inference[0].module_path.relative_to(Path.cwd())
+            except Exception:
+                continue
+            repo_url = self.config["repo_url"]
+            if not repo_url:
+                try:
+                    repo_url = os.popen("git remote get-url origin").read().strip()
+                except Exception:
+                    raise ValueError(
+                        "Please set 'repo_url' in your mkdocs.yml or ensure "
+                        "the current directory is a git repository with a "
+                        "remote named 'origin'."
+                    )
+            if repo_url.startswith("git@"):
+                repo_url = repo_url.replace("git@", "https://")
+            url = f"{repo_url.rstrip('/')}/blob/{self._commit}/{file_path}#L{inference[0].line}"  # noqa: E501
+            heading.append(
+                BeautifulSoup(
+                    f'<span class="sourced-heading-spacer"></span>'
+                    f'<a href="{url}" target="_blank">[source]</a>',
+                    "html.parser",
+                )
+            )
+            heading["class"] = heading.get("class", []) + ["sourced-heading"]
+        return str(soup)
 
     @classmethod
     def iter_names(cls, root):
@@ -241,12 +283,10 @@ class ClickableSnippetsPlugin(BasePlugin):
         pre_html_content = "<pre>" + html_content + "</pre>"
         soup = list(BeautifulSoup(pre_html_content, "html5lib").children)[0]
         code_element = soup.find("code")
-
         line_lengths = [0]
         for line in pre_html_content.split("\n"):
             line_lengths.append(len(line) + line_lengths[-1] + 1)
         line_lengths[-1] -= 1
-
         python_code = ""
         code_offsets = []
         html_nodes = []
@@ -255,8 +295,6 @@ class ClickableSnippetsPlugin(BasePlugin):
         def extract_text_with_offsets(el):
             nonlocal python_code, code_offset
             for content in el.contents:
-                # check not class md-annotation
-                # Recursively process child elements
                 if isinstance(content, str):
                     python_code += content
                     code_offsets.append(code_offset)

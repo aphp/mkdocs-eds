@@ -12,6 +12,7 @@ from markdown.extensions import Extension
 from markdown.extensions.attr_list import get_attrs
 from markdown.extensions.codehilite import parse_hl_lines
 from markdown.extensions.fenced_code import FencedBlockPreprocessor
+from mkdocs import utils
 from mkdocs.config.config_options import Type as MkType
 from mkdocs.config.defaults import MkDocsConfig
 from mkdocs.plugins import BasePlugin
@@ -84,10 +85,18 @@ class PyCodePreprocessor(FencedBlockPreprocessor):
                     )
                     if "render-with-pret" in classes:
                         new_text += text[: m.start()]
+                        code_part = text[m.start() : m.end()]
+                        if "code--expandable" in classes:
+                            code_part = (
+                                "<details><summary>Show code</summary>\n"
+                                + code_part
+                                + "\n</details>"
+                            )
+                        config_str = " ".join(f"{k}={v!r}" for k, v in config.items())
                         new_text += (
                             '<div class="pret-code-snippet" >\n'
-                            + text[m.start() : m.end()]
-                            + f'\n<div class="pret-code-snippet-view-container">'
+                            + code_part
+                            + f'\n<div class="pret-code-snippet-view-container" {config_str}>'  # noqa: E501
                             f'<div class="pret-code-snippet-view-content" data-pret-chunk-idx="{num_pret_code_blocks}" />'  # noqa: E501
                             f"</div>"
                             f"</div>\n"
@@ -169,6 +178,7 @@ class PretSnippetRendererPlugin(BasePlugin):
         config["markdown_extensions"].append(self.ext)
         config["markdown_extensions"].remove("pymdownx.highlight")
         config["markdown_extensions"].remove("fenced_code")
+        config["extra_css"].append("pret.css")
 
     def on_pre_build(self, *, config: MkDocsConfig):
         mkdocstrings_plugin: MkdocstringsPlugin = config.plugins["mkdocstrings"]
@@ -249,3 +259,7 @@ class PretSnippetRendererPlugin(BasePlugin):
                 shutil.copy(file, dest_path)
             else:
                 dest_path.write_text(file)
+        utils.copy_file(
+            str(Path(__file__).parent.parent / "assets/stylesheets/pret.css"),
+            str(Path(config["site_dir"]) / "pret.css"),
+        )

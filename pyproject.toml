@@ -24,9 +24,11 @@ dependencies = [
 [project.entry-points."mkdocs.plugins"]
 "auto_gen_pages" = "mkdocs_eds.auto_gen_pages:AutoGenPagesPlugin"
 "bibtex" = "mkdocs_eds.bibtex:BibTexPlugin"
-"clickable_snippets" = "mkdocs_eds.clickable_snippets:ClickableSnippetsPlugin"
-"link_sources" = "mkdocs_eds.link_sources:LinkSourcesPlugin"
+"clickable_code" = "mkdocs_eds.clickable_code:ClickableCodePlugin"
 "pret_snippet_renderer" = "mkdocs_eds.pret_snippet_renderer:PretSnippetRendererPlugin"
+"mkdocstrings_options_templates" = "mkdocs_eds.mkdocstrings_options_templates:MkdocstringsOptionsTemplatesPlugin"
+"cards" = "mkdocs_eds.cards:MkdocsCardsPlugin"
+"fix_fonts" = "mkdocs_eds.fix_fonts:FixFontsPlugin"
 
 [tool.ruff]
 fix = true
