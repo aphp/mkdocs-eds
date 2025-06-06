@@ -180,6 +180,13 @@ class PretSnippetRendererPlugin(BasePlugin):
         config["markdown_extensions"].remove("fenced_code")
         config["extra_css"].append("pret.css")
 
+        assert "theme" in config and "custom_dir" not in config["theme"], (
+            "Cannot use PretSnippetRendererPlugin with a custom theme directory. "
+        )
+        config["theme"]["custom_dir"] = (
+            Path(__file__).parent.parent / "docs/assets/overrides"
+        )
+
     def on_pre_build(self, *, config: MkDocsConfig):
         mkdocstrings_plugin: MkdocstringsPlugin = config.plugins["mkdocstrings"]
         mkdocstrings_plugin.get_handler("python")
