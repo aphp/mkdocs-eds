@@ -14,7 +14,7 @@ class FixFontsPlugin(BasePlugin):
 
     def on_post_build(self, *, config: "MkDocsConfig") -> None:
         output_base_path = Path(config["site_dir"])
-        base_path = Path(__file__).parent.parent / "assets" / "stylesheets"
+        base_path = Path(__file__).parent / "assets" / "stylesheets"
         from_path = base_path / "override.css"
         to_path = output_base_path / "override.css"
         utils.copy_file(str(from_path), str(to_path))

@@ -14,7 +14,7 @@ class MkdocstringsOptionsTemplatesPlugin(BasePlugin):
         mkdocstrings_plugin = config.plugins.get("mkdocstrings")
         if mkdocstrings_plugin:
             mkdocstrings_plugin.config["custom_templates"] = (
-                Path(__file__).parent.parent / "assets/templates"
+                Path(__file__).parent / "assets/templates"
             )
 
         return config

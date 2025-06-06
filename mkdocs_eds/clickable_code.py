@@ -81,7 +81,7 @@ class ClickableCodePlugin(BasePlugin):
 
     def on_post_build(self, *, config: "MkDocsConfig") -> None:
         output_base_path = Path(config["site_dir"])
-        base_path = Path(__file__).parent.parent / "assets" / "stylesheets"
+        base_path = Path(__file__).parent / "assets" / "stylesheets"
         from_path = base_path / "clickable-code.css"
         to_path = output_base_path / "clickable-code.css"
         utils.copy_file(str(from_path), str(to_path))
@@ -230,8 +230,10 @@ class ClickableCodePlugin(BasePlugin):
         for heading in soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6"]):
             ident = heading.get("id", "")
             if (
-                self.config["pattern"] and not re.match(self.config["pattern"], ident)
-            ) or "--" in ident:
+                (self.config["pattern"] and not re.match(self.config["pattern"], ident))
+                or "--" in ident
+                or "sourced-heading" in heading.get("class", [])
+            ):
                 continue
             if "." not in ident:
                 continue

@@ -183,9 +183,7 @@ class PretSnippetRendererPlugin(BasePlugin):
         assert "theme" in config and "custom_dir" not in config["theme"], (
             "Cannot use PretSnippetRendererPlugin with a custom theme directory. "
         )
-        config["theme"]["custom_dir"] = (
-            Path(__file__).parent.parent / "docs/assets/overrides"
-        )
+        config["theme"]["custom_dir"] = Path(__file__).parent / "assets/overrides"
 
     def on_pre_build(self, *, config: MkDocsConfig):
         mkdocstrings_plugin: MkdocstringsPlugin = config.plugins["mkdocstrings"]
@@ -267,6 +265,6 @@ class PretSnippetRendererPlugin(BasePlugin):
             else:
                 dest_path.write_text(file)
         utils.copy_file(
-            str(Path(__file__).parent.parent / "assets/stylesheets/pret.css"),
+            str(Path(__file__).parent / "assets/stylesheets/pret.css"),
             str(Path(config["site_dir"]) / "pret.css"),
         )
