@@ -183,7 +183,9 @@ class PretSnippetRendererPlugin(BasePlugin):
         assert "theme" in config and "custom_dir" not in config["theme"], (
             "Cannot use PretSnippetRendererPlugin with a custom theme directory. "
         )
-        config["theme"]["custom_dir"] = Path(__file__).parent / "assets/overrides"
+        config.theme.dirs.insert(
+            0, (Path(__file__).parent / "assets/overrides").absolute()
+        )
 
     def on_pre_build(self, *, config: MkDocsConfig):
         mkdocstrings_plugin: MkdocstringsPlugin = config.plugins["mkdocstrings"]
@@ -241,6 +243,7 @@ class PretSnippetRendererPlugin(BasePlugin):
         webpack_bundle = re.search(
             '<script defer[^\n]*? src="(.*?)">', self.assets["index.html"]
         ).group(1)
+        assert "pret-head-scripts" in output, "Theme has not been correctly set up."
         output = output.replace(
             "<script pret-head-scripts></script>",
             "".join(

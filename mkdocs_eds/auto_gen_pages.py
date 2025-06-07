@@ -45,7 +45,6 @@ class AutoGenPagesPlugin(BasePlugin):
         # the user might have in `mkdocs.yml` with the detailed nested list
         # produced above.
         for item in config["nav"]:
-            print("NAV", item)
             if not isinstance(item, dict):
                 continue
             key = next(iter(item))
