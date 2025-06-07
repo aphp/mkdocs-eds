@@ -136,7 +136,7 @@ class ClickableCodePlugin(BasePlugin):
             preceding = output[match.start(0) - 50 : match.start(0)]
             if ep is not None and "DEFAULT:" not in preceding:
                 try:
-                    url = autorefs.get_item_url(ep.replace(":", "."))[0]
+                    url = "/" + autorefs.get_item_url(ep.replace(":", "."))[0]
                 except KeyError:
                     pass
                 else:
@@ -151,7 +151,7 @@ class ClickableCodePlugin(BasePlugin):
             preceding = output[match.start(0) - 50 : match.start(0)]
             if ep is not None and "DEFAULT:" not in preceding:
                 try:
-                    url = autorefs.get_item_url(ep.replace(":", "."))[0]
+                    url = "/" + autorefs.get_item_url(ep.replace(":", "."))[0]
                 except KeyError:
                     pass
                 else:
@@ -210,7 +210,7 @@ class ClickableCodePlugin(BasePlugin):
                 ]
                 goto = gotos[0] if gotos else None
                 if goto:
-                    url = autorefs.get_item_url(goto.full_name)[0]
+                    url = "/" + autorefs.get_item_url(goto.full_name)[0]
                     if not node.find_parents("a"):
                         node.replace_with(
                             BeautifulSoup(
