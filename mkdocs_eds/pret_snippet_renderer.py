@@ -238,6 +238,8 @@ class PretSnippetRendererPlugin(BasePlugin):
         return html
 
     def on_post_page(self, output, page, config):
+        if not self.assets:
+            return output
         url_depth_count = page.url.count("/")
         assets_dir = "../" * url_depth_count + "assets/"
         webpack_bundle = re.search(
