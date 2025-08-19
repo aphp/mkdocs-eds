@@ -129,6 +129,10 @@ class ClickableCodePlugin(BasePlugin):
                 group = ep.group.split("_", 1)[1]
                 all_entry_points[group][ep.name] = ep.value
 
+        def get_path_url(path):
+            url = autorefs.get_item_url(path)[0]
+            return "/" + url if "://" not in url else url
+
         def replace_factory_component(match):
             full_match = match.group(0)
             name = "eds." + match.group(1)
@@ -136,7 +140,7 @@ class ClickableCodePlugin(BasePlugin):
             preceding = output[match.start(0) - 50 : match.start(0)]
             if ep is not None and "DEFAULT:" not in preceding:
                 try:
-                    url = "/" + autorefs.get_item_url(ep.replace(":", "."))[0]
+                    url = get_path_url(ep.replace(":", "."))
                 except KeyError:
                     pass
                 else:
@@ -151,7 +155,7 @@ class ClickableCodePlugin(BasePlugin):
             preceding = output[match.start(0) - 50 : match.start(0)]
             if ep is not None and "DEFAULT:" not in preceding:
                 try:
-                    url = "/" + autorefs.get_item_url(ep.replace(":", "."))[0]
+                    url = get_path_url(ep.replace(":", "."))
                 except KeyError:
                     pass
                 else:
@@ -210,7 +214,7 @@ class ClickableCodePlugin(BasePlugin):
                 ]
                 goto = gotos[0] if gotos else None
                 if goto:
-                    url = "/" + autorefs.get_item_url(goto.full_name)[0]
+                    url = get_path_url(goto.full_name)
                     if not node.find_parents("a"):
                         node.replace_with(
                             BeautifulSoup(
