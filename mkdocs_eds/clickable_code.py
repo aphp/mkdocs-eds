@@ -256,6 +256,9 @@ class ClickableCodePlugin(BasePlugin):
             if not repo_url:
                 try:
                     repo_url = os.popen("git remote get-url origin").read().strip()
+                    repo_url = repo_url.rstrip("/").replace(":", "/")
+                    if repo_url.endswith(".git"):
+                        repo_url = repo_url[:-4]
                 except Exception:
                     raise ValueError(
                         "Please set 'repo_url' in your mkdocs.yml or ensure "
