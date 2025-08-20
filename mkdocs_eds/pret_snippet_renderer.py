@@ -193,7 +193,17 @@ class PretSnippetRendererPlugin(BasePlugin):
 
     def on_page_content(self, html, page, config, files):
         if len(self.page_code_blocks):
-            self.docs_code_blocks[str(page.url)] = list(self.page_code_blocks)
+            # Only run code until the last block that should be rendered
+            # The rest is just wasted compute + potential errors
+            render_indices = [
+                i
+                for i, code_block in enumerate(self.page_code_blocks)
+                if code_block["render"]
+            ]
+            if render_indices:
+                self.docs_code_blocks[str(page.url)] = list(
+                    self.page_code_blocks[: render_indices[-1] + 1]
+                )
         self.page_code_blocks.clear()
 
         page_code_blocks = self.docs_code_blocks.get(str(page.url))
