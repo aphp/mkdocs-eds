@@ -209,7 +209,10 @@ class ClickableCodePlugin(BasePlugin):
                     for goto in gotos
                     if goto
                     and goto.full_name
-                    and goto.full_name.startswith("pret")
+                    and (
+                        not self.config["pattern"]
+                        or re.match(self.config["pattern"], goto.full_name)
+                    )
                     and goto.type != "module"
                 ]
                 goto = gotos[0] if gotos else None
