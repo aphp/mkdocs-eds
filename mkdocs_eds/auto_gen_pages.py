@@ -114,7 +114,6 @@ class AutoGenPagesPlugin(BasePlugin):
         walk(nav.items)
         return nav
 
-    # ------------------------------------------------------------------ helpers
     def _build_reference(self):
         """Populate self._reference_nav and self._virtual_files."""
         for package_root in self._package_paths:
