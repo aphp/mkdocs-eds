@@ -18,8 +18,6 @@ from mkdocs.config.defaults import MkDocsConfig
 from mkdocs.plugins import BasePlugin
 from mkdocstrings.extension import AutoDocProcessor
 from mkdocstrings.plugin import MkdocstringsPlugin
-from pret.main import build
-from pret.marshal import clear_shared_marshaler
 from regex import regex
 
 BRACKET_RE = regex.compile(r"\[([^\[]+)\]")
@@ -184,7 +182,7 @@ class PretSnippetRendererPlugin(BasePlugin):
             "Cannot use PretSnippetRendererPlugin with a custom theme directory. "
         )
         config.theme.dirs.insert(
-            0, (Path(__file__).parent / "assets/overrides").absolute()
+            -1, (Path(__file__).parent / "assets/overrides").absolute()
         )
 
     def on_pre_build(self, *, config: MkDocsConfig):
@@ -209,39 +207,42 @@ class PretSnippetRendererPlugin(BasePlugin):
         page_code_blocks = self.docs_code_blocks.get(str(page.url))
         url_depth_count = page.url.count("/")
         assets_dir = "../" * url_depth_count + "assets/"
-        if page_code_blocks:
-            with tempfile.TemporaryDirectory() as tmp_dir:
-                renderables = []
-                env = {}
-                for block_idx, code_block in enumerate(page_code_blocks):
-                    filename = f"{page.url}_{block_idx}.py".strip("/").replace(
-                        "/", "__"
-                    )
-                    result = run_code_with_result(
-                        code_block["code"],
-                        env,
-                        tmp_dir,
-                        filename,
-                        block_idx,
-                    )
-                    if code_block["render"]:
-                        renderables.append(result)
-                page_code_blocks.clear()
+        if not page_code_blocks:
+            return html
 
-                with build(renderables, mode="federated") as (
-                    assets,
-                    entries,
-                    pickle_filename,
-                ):
-                    remote_imports = str([n for _, n in entries if n is not None])
-                    html = (
-                        "<script>"
-                        f"window.PRET_PICKLE_FILE = '{assets_dir + pickle_filename}';"
-                        f"window.PRET_REMOTE_IMPORTS = {remote_imports};"
-                        "</script>" + html
-                    )
-                    self.assets.update(assets)
-                    self.entries.update(entries)
+        from pret.main import build
+        from pret.marshal import clear_shared_marshaler
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            renderables = []
+            env = {}
+            for block_idx, code_block in enumerate(page_code_blocks):
+                filename = f"{page.url}_{block_idx}.py".strip("/").replace("/", "__")
+                result = run_code_with_result(
+                    code_block["code"],
+                    env,
+                    tmp_dir,
+                    filename,
+                    block_idx,
+                )
+                if code_block["render"]:
+                    renderables.append(result)
+            page_code_blocks.clear()
+
+            with build(renderables, mode="federated") as (
+                assets,
+                entries,
+                pickle_filename,
+            ):
+                remote_imports = str([n for _, n in entries if n is not None])
+                html = (
+                    "<script>"
+                    f"window.PRET_PICKLE_FILE = '{assets_dir + pickle_filename}';"
+                    f"window.PRET_REMOTE_IMPORTS = {remote_imports};"
+                    "</script>" + html
+                )
+                self.assets.update(assets)
+                self.entries.update(entries)
 
         clear_shared_marshaler()
 
