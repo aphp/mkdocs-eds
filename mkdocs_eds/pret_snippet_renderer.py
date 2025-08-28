@@ -181,9 +181,14 @@ class PretSnippetRendererPlugin(BasePlugin):
         assert "theme" in config and "custom_dir" not in config["theme"], (
             "Cannot use PretSnippetRendererPlugin with a custom theme directory. "
         )
-        config.theme.dirs.insert(
-            -1, (Path(__file__).parent / "assets/overrides").absolute()
-        )
+        override_theme_path = (Path(__file__).parent / "assets/overrides").absolute()
+        if override_theme_path not in config.theme.dirs:
+            # the last two themes are mkdocs and angular, and we want to have the lowest
+            # priority above them to not interfere with overrides of docs built with us
+            # TODO: lookup a mechanism to compose overrides ?
+            #   ie how to add both our scripts snippets AND an announcement block
+            #   added by the final docs build
+            config.theme.dirs.insert(-2, str(override_theme_path))
 
     def on_pre_build(self, *, config: MkDocsConfig):
         mkdocstrings_plugin: MkdocstringsPlugin = config.plugins["mkdocstrings"]
@@ -263,7 +268,7 @@ class PretSnippetRendererPlugin(BasePlugin):
                 '<script src="{}"></script>'.format(assets_dir + file)
                 for file, _ in self.entries
             )
-            + f'<script src="{assets_dir + webpack_bundle}"></script>',
+            + f'<script src="{assets_dir + Path(webpack_bundle).name}"></script>',
         )
 
         return output
