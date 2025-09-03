@@ -1,8 +1,8 @@
 [project]
 name = "mkdocs-eds"
-description = "Collection of MkDocs plugins"
+description = "Collection of MkDocs plugins for EDS-style Mkdocs websites"
 authors = [
-    { name = "Perceval Wajsburt", email = "perceval.wajsburt@gmail.com" }
+    { name = "Perceval Wajsburt", email = "perceval.wajsburt@aphp.fr" }
 ]
 readme = "README.md"
 license = { file = "LICENSE" }
