@@ -18,14 +18,14 @@ Add the package to your project (requires Python ≥ 3.9):
 # pyproject.toml
 [project.optional-dependencies]
 docs = [
-  "mkdocs-eds @ git+https://github.com/percevalw/mkdocs-eds.git@main#egg=mkdocs-eds ; python_version>='3.9'",
+  "mkdocs-eds @ git+https://github.com/aphp/mkdocs-eds.git@main#egg=mkdocs-eds ; python_version>='3.9'",
 ]
 ```
 
 Or install directly:
 
 ```bash
-pip install "mkdocs-eds @ git+https://github.com/percevalw/mkdocs-eds.git@main#egg=mkdocs-eds"
+pip install "mkdocs-eds @ git+https://github.com/aphp/mkdocs-eds.git@main#egg=mkdocs-eds"
 ```
 
 This package vendors patched forks of `mkdocs-autorefs` and `mkdocstrings-python` to enable a few behaviors used below.
