@@ -1,6 +1,6 @@
 [project]
 name = "mkdocs-eds"
-description = "Collection of MkDocs plugins for EDS-style Mkdocs websites"
+description = "Collection of MkDocs plugins and markdown extensions for EDS-style MkDocs websites"
 authors = [
     { name = "Perceval Wajsburt", email = "perceval.wajsburt@aphp.fr" }
 ]
