@@ -6,8 +6,8 @@ authors = [
 ]
 readme = "README.md"
 license = { file = "LICENSE" }
-urls.homepage = "https://github.com/perceval/mkdocs-eds/"
-urls.repository = "https://github.com/perceval/mkdocs-eds/"
+urls.homepage = "https://github.com/aphp/mkdocs-eds/"
+urls.repository = "https://github.com/aphp/mkdocs-eds/"
 dynamic = ["version"]
 requires-python = ">=3.7,<4.0,!=3.8.1"
 dependencies = [
