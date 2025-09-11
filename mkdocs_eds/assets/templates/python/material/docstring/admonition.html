@@ -1,0 +1,2 @@
+{{ ("# " + section.title + "\n")|convert_markdown(heading_level, html_id, strip_paragraph=True, autoref_hook=autoref_hook) }}
+{{ section.value.contents|convert_markdown(heading_level, html_id, autoref_hook=autoref_hook) }}
