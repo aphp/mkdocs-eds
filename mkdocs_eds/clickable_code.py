@@ -259,7 +259,15 @@ class ClickableCodePlugin(BasePlugin):
             if not repo_url:
                 try:
                     repo_url = os.popen("git remote get-url origin").read().strip()
-                    repo_url = repo_url.rstrip("/").replace(":", "/")
+                    repo_url = repo_url.rstrip("/")
+                    # conversion from SSH-style remotes (git@host:xxx/yyy.git) to https
+                    if repo_url.startswith("git@"):
+                        host_path = repo_url[len("git@") :]
+                        if ":" in host_path:
+                            host, path = host_path.split(":", 1)
+                            repo_url = f"https://{host}/{path}"
+                        else:
+                            repo_url = repo_url.replace("git@", "https://", 1)
                     if repo_url.endswith(".git"):
                         repo_url = repo_url[:-4]
                 except Exception:
@@ -269,7 +277,7 @@ class ClickableCodePlugin(BasePlugin):
                         "remote named 'origin'."
                     )
             if repo_url.startswith("git@"):
-                repo_url = repo_url.replace("git@", "https://")
+                repo_url = repo_url.replace("git@", "https://", 1)
             url = f"{repo_url.rstrip('/')}/blob/{self._commit}/{file_path}#L{inference[0].line}"  # noqa: E501
             heading.append(
                 BeautifulSoup(
