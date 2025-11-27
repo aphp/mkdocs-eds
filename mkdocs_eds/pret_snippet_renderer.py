@@ -2,6 +2,7 @@ import ast
 import os
 import re
 import shutil
+import sys
 import tempfile
 from pathlib import Path
 from textwrap import dedent
@@ -131,6 +132,8 @@ class PyCodeExtension(Extension):
 def run_code_with_result(code, env, tmp_dir, filename: str, block_idx):
     # Parse the code into an AST
     tree = ast.parse(code, mode="exec")
+    if not tree.body:
+        return None
     # Check if the last statement is an expression
     *body, last_expr = tree.body
     # Execute all statements except the last expression
@@ -147,10 +150,15 @@ def run_code_with_result(code, env, tmp_dir, filename: str, block_idx):
         ]
     )
     new_body = ast.fix_missing_locations(new_body)
-    new_body = astunparse.unparse(new_body)
-    tmp_filename = Path(tmp_dir) / filename
-    tmp_filename.write_text(new_body)
-    exec(compile(new_body, tmp_filename, "exec"), env)
+    path_before = sys.path
+    try:
+        sys.path = [os.getcwd()] + sys.path
+        new_body = astunparse.unparse(new_body)
+        tmp_filename = Path(tmp_dir) / filename
+        tmp_filename.write_text(new_body)
+        exec(compile(new_body, tmp_filename, "exec"), env)
+    finally:
+        sys.path = path_before
     # run tmp_file
     ret_value = env.get(f"ret_value_{block_idx}")
     return ret_value

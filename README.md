@@ -85,9 +85,9 @@ Automatically builds a full reference section from one or more Python package ro
 Example:
 
 ```markdown
-# AnnotatedText {: #pret.ui.metanno.AnnotatedText }
+# AnnotatedText {: #metanno.ui.AnnotatedText }
 
-::: pret.ui.metanno.AnnotatedText
+::: metanno.ui.AnnotatedText
     options:
         heading_level: 2
         show_bases: false
@@ -193,7 +193,7 @@ Executes Python code blocks and renders their results using [Pret](https://githu
 Some markdown text before.
 
 ```python { .render-with-pret .code--expandable }
-from pret.ui.joy import Button, Typography, Stack
+from pret_joy import Button, Typography, Stack
 
 Button("Click me!")
 ```
