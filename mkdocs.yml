@@ -1,0 +1,91 @@
+site_name: mkdocs-eds
+site_description: Showcase of the mkdocs-eds plugins and Markdown extensions.
+repo_url: https://github.com/aphp/mkdocs-eds
+repo_name: aphp/mkdocs-eds
+
+theme:
+  name: material
+  language: en
+  features:
+    - navigation.tracking
+    - navigation.instant
+    - navigation.indexes
+    - content.code.copy
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/brightness-4
+        name: Switch to dark mode
+    - scheme: slate
+      toggle:
+        icon: material/brightness-7
+        name: Switch to light mode
+
+nav:
+  - Home: index.md
+  - Extensions:
+      - Auto-generated reference: extensions/auto-gen-pages.md
+      - Clickable code: extensions/clickable-code.md
+      - Cards layout: extensions/cards.md
+      - Pret snippet renderer: extensions/pret-snippets.md
+      - Citations: extensions/citations.md
+  - Reference: reference/
+
+extra_css:
+  - assets/stylesheets/extra.css
+
+watch:
+  - demo_package
+  - docs
+
+plugins:
+  - auto_gen_pages:
+      package_dirs:
+        - demo_package
+      reference_section: Reference
+  - fix_fonts
+  - cards
+  - search
+  - autorefs:
+      priority:
+        - "*"
+        - reference
+  - mkdocstrings_options_templates
+  - mkdocstrings:
+      enable_inventory: true
+      handlers:
+        python:
+          options:
+            docstring_style: numpy
+            docstring_section_style: spacy
+            members_order: source
+            show_signature: false
+            merge_init_into_class: true
+  - bibtex:
+      bibtex_file: "docs/references.bib"
+  - clickable_code:
+      repo_url: https://github.com/aphp/mkdocs-eds
+  - pret_snippet_renderer
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - footnotes
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.highlight
+  - fenced_code
+  - pymdownx.superfences
+  - pymdownx.snippets
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+validation:
+  absolute_links: ignore
+  unrecognized_links: ignore
