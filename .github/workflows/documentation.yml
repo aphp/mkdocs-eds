@@ -24,7 +24,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install . --group docs
+        pip install . --group dev
 
     - name: Set up Git
       run: |
