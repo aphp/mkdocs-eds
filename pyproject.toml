@@ -9,7 +9,7 @@ license = { file = "LICENSE" }
 urls.homepage = "https://github.com/aphp/mkdocs-eds/"
 urls.repository = "https://github.com/aphp/mkdocs-eds/"
 dynamic = ["version"]
-requires-python = ">=3.7,<4.0,!=3.8.1"
+requires-python = ">=3.9,<4.0"
 dependencies = [
     "astunparse",
     "beautifulsoup4",
@@ -21,14 +21,13 @@ dependencies = [
     "mkdocs-autorefs @ git+https://github.com/percevalw/mkdocs-autorefs.git@main#egg=mkdocs-autorefs",
     "mkdocs-charts-plugin==0.0.8",
     "mkdocs-img2fig-plugin==0.9.3",
-    "mkdocs-material~=9.2.0",
+    "mkdocs-material~=9.4.0",
     "mkdocs-minify-plugin",
     "mkdocs-redirects>=1.2.1;python_version>='3.8'",
     "mkdocs-section-index==0.3.4",
     "mkdocstrings-python @ git+https://github.com/percevalw/mkdocstrings-python.git@main#egg=mkdocstrings-python",
     "mkdocstrings<1",
-    "mkdocs",
-    "pybtex~=0.24.0",
+    "pybtex~=0.25.1",
 ]
 
 [project.entry-points."mkdocs.plugins"]
@@ -71,8 +70,19 @@ path = "mkdocs_eds/__init__.py"
 requires = ["hatchling", "pip<=24.0"]
 build-backend = "hatchling.build"
 
+[dependency-groups]
+dev = [
+    "pret>=0.5.1",
+    "pret-joy>=5.0.0b52.post1",
+]
+
 [tool.hatch.build]
 artifacts = ["mkdocs_eds"]
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    "mkdocs_eds",
+]
 
 [tool.hatch.envs.ci]
 detached = true
