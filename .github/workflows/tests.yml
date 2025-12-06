@@ -1,0 +1,60 @@
+name: Linting and Test Documentation
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main]
+
+env:
+  BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+
+jobs:
+  linting:
+    name: Linting
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          # requites to grab the history of the PR
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          cache: 'pip'
+
+      - uses: pre-commit/action@v3.0.0
+        with:
+          extra_args: --color=always --from-ref ${{ github.event.pull_request.base.sha }} --to-ref ${{ github.event.pull_request.head.sha }}
+
+  documentation:
+    name: Test Documentation
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+    # Main docs are built in another workflow, we don't have to test them outside of PR
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    steps:
+    - uses: actions/checkout@v2
+
+    - uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: pip install -e . --group dev
+
+    - name: Set up Git
+      run: |
+        git config user.name ${{ github.actor }}
+        git config user.email ${{ github.actor }}@users.noreply.github.com
+        echo Current branch: $BRANCH_NAME
+
+    - name: Build documentation
+      run: |
+        mike deploy --alias-type=copy --update-aliases $BRANCH_NAME latest
+        mike set-default $BRANCH_NAME
