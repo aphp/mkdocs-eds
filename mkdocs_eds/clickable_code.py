@@ -18,7 +18,7 @@ from mkdocs.config import Config
 from mkdocs.config import config_options as opt
 from mkdocs.config.defaults import MkDocsConfig
 from mkdocs.plugins import BasePlugin
-from mkdocs_autorefs.plugin import AutorefsPlugin
+from mkdocs_autorefs import AutorefsPlugin
 
 try:
     from importlib.metadata import entry_points
@@ -89,7 +89,13 @@ class ClickableCodePlugin(BasePlugin):
     @classmethod
     def get_ep_namespace(cls, ep, namespace=None):
         if hasattr(ep, "select"):
-            return ep.select(group=namespace) if namespace else list(ep._all)
+            return (
+                ep.select(group=namespace)
+                if namespace
+                else list(ep._all)
+                if hasattr(ep, "_all")
+                else list(ep)
+            )
         else:
             return (
                 ep.get(namespace, [])
