@@ -17,8 +17,7 @@ from mkdocs import utils
 from mkdocs.config.config_options import Type as MkType
 from mkdocs.config.defaults import MkDocsConfig
 from mkdocs.plugins import BasePlugin
-from mkdocstrings.extension import AutoDocProcessor
-from mkdocstrings.plugin import MkdocstringsPlugin
+from mkdocstrings import AutoDocProcessor, MkdocstringsPlugin
 from regex import regex
 
 BRACKET_RE = regex.compile(r"\[([^\[]+)\]")
