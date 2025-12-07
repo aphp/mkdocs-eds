@@ -21,13 +21,14 @@ dependencies = [
     "mkdocs-autorefs @ git+https://github.com/percevalw/mkdocs-autorefs.git@main#egg=mkdocs-autorefs",
     "mkdocs-charts-plugin==0.0.8",
     "mkdocs-img2fig-plugin==0.9.3",
-    "mkdocs-material~=9.4.0",
+    "mkdocs-material~=9.2",  # 9.4 cause issues with pret rendering on multiple pages
     "mkdocs-minify-plugin",
     "mkdocs-redirects>=1.2.1;python_version>='3.8'",
     "mkdocs-section-index==0.3.4",
     "mkdocstrings-python @ git+https://github.com/percevalw/mkdocstrings-python.git@main#egg=mkdocstrings-python",
     "mkdocstrings<1",
     "pybtex~=0.25.1",
+    "regex",
 ]
 
 [project.entry-points."mkdocs.plugins"]
