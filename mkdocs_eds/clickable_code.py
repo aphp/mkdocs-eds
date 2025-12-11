@@ -184,18 +184,19 @@ class ClickableCodePlugin(BasePlugin):
         all_snippets = ""
         all_offsets = []
         all_nodes = []
-        soups = []
-        for match in regex.finditer("<code>.*?</code>", output, flags=regex.DOTALL):
-            node = match.group(0)
-            if "\n" in node:
-                soup, snippet, python_offsets, html_nodes = self.convert_html_to_code(
-                    node
-                )
-                size = len(all_snippets)
-                all_snippets += snippet + "\n"
-                all_offsets.extend([size + i for i in python_offsets])
-                all_nodes.extend(html_nodes)
-                soups.append((soup, match.start(0), match.end(0)))
+        code_soup = BeautifulSoup(output, "html.parser")
+        for code_element in code_soup.find_all("code"):
+            if "\n" not in code_element.text:
+                continue
+            if code_element.find_parent(class_="no-click"):
+                continue
+            snippet, python_offsets, html_nodes = self.convert_code_tag_to_snippet(
+                code_element
+            )
+            size = len(all_snippets)
+            all_snippets += snippet + "\n"
+            all_offsets.extend([size + i for i in python_offsets])
+            all_nodes.extend(html_nodes)
 
         interpreter = jedi.Interpreter(all_snippets, [{}])
         line_lengths = [0]
@@ -224,7 +225,9 @@ class ClickableCodePlugin(BasePlugin):
                 goto = gotos[0] if gotos else None
                 if goto:
                     url = get_path_url(goto.full_name)
-                    if not node.find_parents("a"):
+                    if not node.find_parent(
+                        class_="no-click"
+                    ) and not node.find_parents("a"):
                         node.replace_with(
                             BeautifulSoup(
                                 f'<a class="clickable-discrete-link" href="{url}">{node}</a>',  # noqa: E501
@@ -234,8 +237,7 @@ class ClickableCodePlugin(BasePlugin):
             except Exception:
                 pass
 
-        for soup, start, end in reversed(soups):
-            output = output[:start] + str(soup.find("code")) + output[end:]
+        output = str(code_soup)
 
         output = regex.sub(HREF_REGEX, replace_link, output)
 
@@ -303,16 +305,7 @@ class ClickableCodePlugin(BasePlugin):
             yield from cls.iter_names(child)
 
     @classmethod
-    def convert_html_to_code(
-        cls, html_content: str
-    ) -> Tuple[BeautifulSoup, str, list, list]:
-        pre_html_content = "<pre>" + html_content + "</pre>"
-        soup = list(BeautifulSoup(pre_html_content, "html5lib").children)[0]
-        code_element = soup.find("code")
-        line_lengths = [0]
-        for line in pre_html_content.split("\n"):
-            line_lengths.append(len(line) + line_lengths[-1] + 1)
-        line_lengths[-1] -= 1
+    def convert_code_tag_to_snippet(cls, code_element) -> Tuple[str, list, list]:
         python_code = ""
         code_offsets = []
         html_nodes = []
@@ -332,4 +325,16 @@ class ClickableCodePlugin(BasePlugin):
 
         extract_text_with_offsets(code_element)
 
+        return python_code, code_offsets, html_nodes
+
+    @classmethod
+    def convert_html_to_code(
+        cls, html_content: str
+    ) -> Tuple[BeautifulSoup, str, list, list]:
+        pre_html_content = "<pre>" + html_content + "</pre>"
+        soup = list(BeautifulSoup(pre_html_content, "html5lib").children)[0]
+        code_element = soup.find("code")
+        python_code, code_offsets, html_nodes = cls.convert_code_tag_to_snippet(
+            code_element
+        )
         return soup, python_code, code_offsets, html_nodes
