@@ -7,8 +7,10 @@ import subprocess
 from pathlib import Path, PurePosixPath
 
 import nbformat
+from mkdocs import utils
 from mkdocs.config import Config
 from mkdocs.config import config_options as opt
+from mkdocs.config.defaults import MkDocsConfig
 from mkdocs.plugins import BasePlugin
 from mkdocs.structure.files import File, Files
 
@@ -27,8 +29,8 @@ BUTTON_HTML = """
             border-radius: 4px;
             display: inline-flex; align-items: center; gap: 6px; padding: 0 0.5em;">
     <svg xmlns="http://www.w3.org/2000/svg" width="20px" height="20px" viewBox="0 0 24 24" fill="none">
-        <path d="M3 15C3 17.8284 3 19.2426 3.87868 20.1213C4.75736 21 6.17157 21 9 21H15C17.8284 21 19.2426 21 20.1213 20.1213C21 19.2426 21 17.8284 21 15" stroke="var(--md-default-bg-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M12 3V16M12 16L16 11.625M12 16L8 11.625" stroke="var(--md-default-bg-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M3 15C3 17.8284 3 19.2426 3.87868 20.1213C4.75736 21 6.17157 21 9 21H15C17.8284 21 19.2426 21 20.1213 20.1213C21 19.2426 21 17.8284 21 15" stroke="var(--md-primary-bg-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M12 3V16M12 16L16 11.625M12 16L8 11.625" stroke="var(--md-primary-bg-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
     Download notebook
   </a>
@@ -81,7 +83,10 @@ class NotebooksToMarkdownPlugin(BasePlugin):
     )
 
     def on_config(self, config: Config) -> Config:
+        if "notebook.css" not in config["extra_css"]:
+            config["extra_css"].append("notebook.css")
         self._virtual_files: dict[str, str] = {}
+        self._download_urls: dict[str, str] = {}
         self._docs_dir = Path(config["docs_dir"]).resolve()
         from_mkdocs = config.get("repo_url")
         if from_mkdocs:
@@ -122,54 +127,54 @@ class NotebooksToMarkdownPlugin(BasePlugin):
 
     def on_files(self, files: Files, config: Config) -> Files:
         self._virtual_files.clear()
-        existing_paths = {PurePosixPath(file.src_path).as_posix() for file in files}
-
-        virtual_paths: list[str] = []
-        for file in files:
-            src_path = PurePosixPath(file.src_path)
-            src_posix = src_path.as_posix()
-            if src_path.suffix.lower() != ".ipynb":
-                continue
-            if src_path.name.startswith("."):
-                continue
-            if ".ipynb_checkpoints" in src_path.parts:
-                continue
-            if any(part.startswith(".") for part in src_path.parts[:-1]):
-                continue
-
-            include_glob = self.config["include_glob"]
-            matches_include = src_path.match(include_glob) or (
-                include_glob.startswith("**/") and src_path.match(include_glob[3:])
-            )
-            if not matches_include:
-                continue
-            exclude_glob = self.config.get("exclude_glob")
-            if exclude_glob:
-                matches_exclude = src_path.match(exclude_glob) or (
-                    exclude_glob.startswith("**/") and src_path.match(exclude_glob[3:])
-                )
-                if matches_exclude:
-                    continue
-
-            markdown_path = src_path.with_suffix(".md").as_posix()
-            if markdown_path in existing_paths:
-                raise ValueError(
-                    "Cannot generate virtual page for notebook "
-                    f"{src_posix}: {markdown_path} already exists."
-                )
-
-            self._virtual_files[markdown_path] = self.render_notebook(
-                notebook_path=Path(file.abs_src_path),
-                src_path=src_posix,
-            )
-            existing_paths.add(markdown_path)
-            virtual_paths.append(markdown_path)
-
+        self._download_urls.clear()
+        notebook_nav_paths: set[str] = set()
         nav = config.get("nav")
         if nav:
-            self.rewrite_nav_notebook_paths(nav)
+            self.rewrite_nav_notebook_paths(nav, notebook_nav_paths)
 
-        new_files = list(files) + [
+        files_by_path = {
+            PurePosixPath(file.src_path).as_posix(): file for file in files
+        }
+        virtual_paths: list[str] = []
+        for notebook_path in sorted(notebook_nav_paths):
+            source_file = files_by_path.get(notebook_path)
+            if source_file is None:
+                raise ValueError(
+                    f"Notebook referenced in nav was not found in docs: {notebook_path}"
+                )
+            src_path = PurePosixPath(notebook_path)
+            src_posix = src_path.as_posix()
+            markdown_path = src_path.with_suffix(".md").as_posix()
+
+            self._virtual_files[markdown_path] = self.render_notebook(
+                notebook_path=Path(source_file.abs_src_path),
+                src_path=src_posix,
+            )
+            if self.config["download_notebook_link"] and self._repo_url:
+                if self._repo_root is not None:
+                    try:
+                        resolved_notebook = Path(source_file.abs_src_path).resolve()
+                        relative = resolved_notebook.relative_to(
+                            self._repo_root
+                        ).as_posix()
+                    except ValueError:
+                        relative = f"{self._docs_dir.name}/{src_posix}"
+                else:
+                    relative = f"{self._docs_dir.name}/{src_posix}"
+                self._download_urls[markdown_path] = (
+                    f"{self._repo_url}/blob/{self._commit}/{relative}?raw=1"
+                )
+            virtual_paths.append(markdown_path)
+
+        virtual_path_set = set(virtual_paths)
+        base_files = [
+            file
+            for file in files
+            if PurePosixPath(file.src_path).as_posix() not in virtual_path_set
+        ]
+
+        new_files = base_files + [
             File(
                 path,
                 config["docs_dir"],
@@ -183,10 +188,25 @@ class NotebooksToMarkdownPlugin(BasePlugin):
     def on_page_read_source(self, page, config: Config):
         return self._virtual_files.get(page.file.src_path)
 
-    def rewrite_nav_notebook_paths(self, node) -> None:
+    def on_page_content(self, html, page, config: Config, files):
+        download_url = self._download_urls.get(page.file.src_path)
+        if not download_url:
+            return html
+        return BUTTON_HTML.format(download_url=download_url) + html
+
+    def rewrite_nav_notebook_paths(self, node, notebook_paths: set[str]) -> None:
         if isinstance(node, list):
-            for item in node:
-                self.rewrite_nav_notebook_paths(item)
+            for idx, item in enumerate(node):
+                if isinstance(item, str):
+                    if "://" in item or item.startswith("mailto:"):
+                        continue
+                    path = PurePosixPath(item.strip("/"))
+                    if path.suffix.lower() == ".ipynb":
+                        notebook_path = path.as_posix()
+                        notebook_paths.add(notebook_path)
+                        node[idx] = path.with_suffix(".md").as_posix()
+                else:
+                    self.rewrite_nav_notebook_paths(item, notebook_paths)
             return
 
         if isinstance(node, dict):
@@ -196,9 +216,11 @@ class NotebooksToMarkdownPlugin(BasePlugin):
                         continue
                     path = PurePosixPath(value.strip("/"))
                     if path.suffix.lower() == ".ipynb":
+                        notebook_path = path.as_posix()
+                        notebook_paths.add(notebook_path)
                         node[key] = path.with_suffix(".md").as_posix()
                 else:
-                    self.rewrite_nav_notebook_paths(value)
+                    self.rewrite_nav_notebook_paths(value, notebook_paths)
 
     def render_output(self, output) -> str:
         output_type = output.get("output_type")
@@ -211,15 +233,15 @@ class NotebooksToMarkdownPlugin(BasePlugin):
                 pattern.search(text) for pattern in WARNING_PATTERNS
             ):
                 return ""
-            return f"```text\n{text}\n```"
+            return f"```text {{ .code-output }}\n{text}\n```"
 
         if output_type == "error":
             traceback_text = "\n".join(output.get("traceback", [])).rstrip()
             if traceback_text:
-                return f"```text\n{traceback_text}\n```"
+                return f"```text {{ .code-output }}\n{traceback_text}\n```"
             text = join_text(output.get("text")).rstrip()
             if text:
-                return f"```text\n{text}\n```"
+                return f"```text {{ .code-output }}\n{text}\n```"
             return ""
 
         if output_type not in {"display_data", "execute_result"}:
@@ -249,7 +271,7 @@ class NotebooksToMarkdownPlugin(BasePlugin):
 
         plain = join_text(data.get("text/plain")).rstrip()
         if plain:
-            return f"```text\n{plain}\n```"
+            return f"```text {{ .code-output }}\n{plain}\n```"
 
         if "application/json" in data:
             raw_json = data["application/json"]
@@ -257,7 +279,7 @@ class NotebooksToMarkdownPlugin(BasePlugin):
                 payload = raw_json
             else:
                 payload = json.dumps(raw_json, indent=2, ensure_ascii=False)
-            return f"```json\n{payload}\n```"
+            return f"```json {{ .code-output }}\n{payload}\n```"
 
         return ""
 
@@ -346,33 +368,16 @@ class NotebooksToMarkdownPlugin(BasePlugin):
 
     def render_notebook(self, notebook_path: Path, src_path: str) -> str:
         notebook = nbformat.read(notebook_path, as_version=4)
-        chunks = [
-            (
-                f"<!-- AUTO-GENERATED FROM `{src_path}` BY "
-                "`mkdocs_eds.notebooks_to_md.NotebooksToMarkdownPlugin`. "
-                "EDIT THE NOTEBOOK INSTEAD. -->"
-            )
-        ]
-        if self.config["download_notebook_link"]:
-            download_url = None
-            if self._repo_url:
-                if self._repo_root is not None:
-                    try:
-                        resolved_notebook = notebook_path.resolve()
-                        relative = resolved_notebook.relative_to(
-                            self._repo_root
-                        ).as_posix()
-                    except ValueError:
-                        relative = f"{self._docs_dir.name}/{src_path}"
-                else:
-                    relative = f"{self._docs_dir.name}/{src_path}"
-                download_url = f"{self._repo_url}/blob/{self._commit}/{relative}?raw=1"
-            if download_url:
-                chunks.append((BUTTON_HTML.format(download_url=download_url)))
-
+        chunks: list[str] = []
         for cell in notebook.cells:
             rendered = self.cell_to_markdown(cell)
             if rendered:
                 chunks.append(rendered)
-
         return "\n\n".join(chunks).rstrip() + "\n"
+
+    def on_post_build(self, *, config: "MkDocsConfig") -> None:
+        output_base_path = Path(config["site_dir"])
+        base_path = Path(__file__).parent / "assets" / "stylesheets"
+        from_path = base_path / "notebook.css"
+        to_path = output_base_path / "notebook.css"
+        utils.copy_file(str(from_path), str(to_path))
