@@ -3,6 +3,7 @@
 A small collection of MkDocs plugins and Markdown extensions to make technical docs nicer and more interactive:
 
 - Auto‑generate a full API reference from your Python packages
+- Convert Jupyter notebooks to virtual Markdown pages at build time
 - Make code and headings clickable to their source/reference
 - Add simple “cards” layouts in Markdown
 - Render interactive Python snippets with Pret
@@ -44,6 +45,7 @@ plugins:
   - auto_gen_pages:
       package_dirs: ["your_package"]
       reference_section: Reference
+  - notebooks_to_md
   - fix_fonts
   - cards
   - search
@@ -115,6 +117,26 @@ plugins:
       reference_section: Reference
       copy_files:
         changelog.md: changelog.md
+```
+
+### Notebook Conversion (`notebooks_to_md`)
+
+Converts `.ipynb` files under `docs/` into pages at build time: it renders notebook cells and outputs to Markdown, including text/html/json and inline image outputs. It also adds a `Download notebook` button at the top of generated pages when a repository URL can be resolved.
+
+Options:
+
+- `include_glob` (str, default `**/*.ipynb`): notebooks to include.
+- `exclude_glob` (str, default `**/.ipynb_checkpoints/*`): notebooks to skip.
+- `download_notebook_link` (bool, default `true`): show/hide the download button.
+
+Example:
+
+```yaml
+plugins:
+  - notebooks_to_md:
+      include_glob: "**/*.ipynb"
+      exclude_glob: "**/.ipynb_checkpoints/*"
+      download_notebook_link: true
 ```
 
 
