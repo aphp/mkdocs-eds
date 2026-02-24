@@ -21,7 +21,7 @@ WARNING_PATTERNS = [
 TABLE_TAG_RE = re.compile(r"<table\b[^>]*>", flags=re.IGNORECASE)
 BUTTON_HTML = """
 <div style="clear: both;">
-  <a href="{download_url}"
+  <a href="{download_url}" download="{download_name}"
      class="md-button md-button--primary"
      style="float: right; margin: 5px 0 0px;
             background-color: var(--md-primary-fg-color);
@@ -87,6 +87,7 @@ class NotebooksToMarkdownPlugin(BasePlugin):
             config["extra_css"].append("notebook.css")
         self._virtual_files: dict[str, str] = {}
         self._download_urls: dict[str, str] = {}
+        self._download_names: dict[str, str] = {}
         self._docs_dir = Path(config["docs_dir"]).resolve()
         from_mkdocs = config.get("repo_url")
         if from_mkdocs:
@@ -128,6 +129,7 @@ class NotebooksToMarkdownPlugin(BasePlugin):
     def on_files(self, files: Files, config: Config) -> Files:
         self._virtual_files.clear()
         self._download_urls.clear()
+        self._download_names.clear()
         notebook_nav_paths: set[str] = set()
         nav = config.get("nav")
         if nav:
@@ -163,8 +165,9 @@ class NotebooksToMarkdownPlugin(BasePlugin):
                 else:
                     relative = f"{self._docs_dir.name}/{src_posix}"
                 self._download_urls[markdown_path] = (
-                    f"{self._repo_url}/blob/{self._commit}/{relative}?raw=1"
+                    f"{self._repo_url}/raw/{self._commit}/{relative}"
                 )
+                self._download_names[markdown_path] = PurePosixPath(relative).name
             virtual_paths.append(markdown_path)
 
         virtual_path_set = set(virtual_paths)
@@ -190,9 +193,13 @@ class NotebooksToMarkdownPlugin(BasePlugin):
 
     def on_page_content(self, html, page, config: Config, files):
         download_url = self._download_urls.get(page.file.src_path)
+        download_name = self._download_names.get(page.file.src_path, "")
         if not download_url:
             return html
-        return BUTTON_HTML.format(download_url=download_url) + html
+        return (
+            BUTTON_HTML.format(download_url=download_url, download_name=download_name)
+            + html
+        )
 
     def rewrite_nav_notebook_paths(self, node, notebook_paths: set[str]) -> None:
         if isinstance(node, list):
