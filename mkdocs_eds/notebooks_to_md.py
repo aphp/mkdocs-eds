@@ -7,6 +7,7 @@ import subprocess
 from pathlib import Path, PurePosixPath
 
 import nbformat
+import urllib3
 from mkdocs import utils
 from mkdocs.config import Config
 from mkdocs.config import config_options as opt
@@ -164,9 +165,16 @@ class NotebooksToMarkdownPlugin(BasePlugin):
                         relative = f"{self._docs_dir.name}/{src_posix}"
                 else:
                     relative = f"{self._docs_dir.name}/{src_posix}"
-                self._download_urls[markdown_path] = (
-                    f"{self._repo_url}/raw/{self._commit}/{relative}"
-                )
+                parsed = urllib3.util.parse_url(self._repo_url)
+                if parsed.netloc.lower() == "github.com":
+                    repo_path = parsed.path.strip("/")
+                    self._download_urls[markdown_path] = (
+                        f"https://cdn.jsdelivr.net/gh/{repo_path}@{self._commit}/{relative}"
+                    )
+                else:
+                    self._download_urls[markdown_path] = (
+                        f"{self._repo_url}/raw/{self._commit}/{relative}"
+                    )
                 self._download_names[markdown_path] = PurePosixPath(relative).name
             virtual_paths.append(markdown_path)
 
