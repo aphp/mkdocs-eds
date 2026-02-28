@@ -225,8 +225,9 @@ class PretSnippetRendererPlugin(BasePlugin):
         from pret.main import build
         from pret.marshal import clear_shared_marshaler
 
+        base_html = html
+
         with tempfile.TemporaryDirectory() as tmp_dir:
-            renderables = []
             env = {}
             for block_idx, code_block in enumerate(page_code_blocks):
                 filename = f"{page.url}_{block_idx}.py".strip("/").replace("/", "__")
@@ -238,23 +239,21 @@ class PretSnippetRendererPlugin(BasePlugin):
                     block_idx,
                 )
                 if code_block["render"]:
-                    renderables.append(result)
+                    with build([result], mode="federated") as (
+                        assets,
+                        entries,
+                        pkl_filename,
+                    ):
+                        remote_imports = str([n for _, n in entries if n is not None])
+                        html = (
+                            "<script>"
+                            f"window.PRET_PICKLE_FILE = '{assets_dir + pkl_filename}';"
+                            f"window.PRET_REMOTE_IMPORTS = {remote_imports};"
+                            "</script>" + base_html
+                        )
+                        self.assets.update(assets)
+                        self.entries.update(entries)
             page_code_blocks.clear()
-
-            with build(renderables, mode="federated") as (
-                assets,
-                entries,
-                pickle_filename,
-            ):
-                remote_imports = str([n for _, n in entries if n is not None])
-                html = (
-                    "<script>"
-                    f"window.PRET_PICKLE_FILE = '{assets_dir + pickle_filename}';"
-                    f"window.PRET_REMOTE_IMPORTS = {remote_imports};"
-                    "</script>" + html
-                )
-                self.assets.update(assets)
-                self.entries.update(entries)
 
         clear_shared_marshaler()
 
