@@ -4,6 +4,7 @@ import re
 import shutil
 import sys
 import tempfile
+import uuid
 from pathlib import Path
 from textwrap import dedent
 from typing import Tuple
@@ -72,13 +73,14 @@ class PyCodePreprocessor(FencedBlockPreprocessor):
                         config["hl_lines"] = parse_hl_lines(m.group("hl_lines"))
                 # ----
                 code = m.group("code")
+                block_id = f"__PRET_BLOCK_{uuid.uuid4()}__"
 
                 if lang == "python" and "no-exec" not in classes:
                     self.code_blocks.append(
                         {
                             "code": dedent(code),
                             "render": "render-with-pret" in classes,
-                            "id": num_pret_code_blocks,
+                            "id": block_id,
                         }
                     )
                     if "render-with-pret" in classes:
@@ -95,7 +97,7 @@ class PyCodePreprocessor(FencedBlockPreprocessor):
                             '<div class="pret-code-snippet" >\n'
                             + code_part
                             + f'\n<div class="pret-code-snippet-view-container" {config_str}>'  # noqa: E501
-                            f'<div class="pret-code-snippet-view-content" data-pret-chunk-idx="{num_pret_code_blocks}" />'  # noqa: E501
+                            f'<div class="pret-code-snippet-view-content" data-pret-chunk-idx="{block_id}" />'  # noqa: E501
                             f"</div>"
                             f"</div>\n"
                         )
@@ -225,8 +227,8 @@ class PretSnippetRendererPlugin(BasePlugin):
         from pret.main import build
         from pret.marshal import clear_shared_marshaler
 
-        base_html = html
-
+        remote_imports = set()
+        num_chunks = 0
         with tempfile.TemporaryDirectory() as tmp_dir:
             env = {}
             for block_idx, code_block in enumerate(page_code_blocks):
@@ -244,16 +246,19 @@ class PretSnippetRendererPlugin(BasePlugin):
                         entries,
                         pkl_filename,
                     ):
-                        remote_imports = str([n for _, n in entries if n is not None])
-                        html = (
-                            "<script>"
-                            f"window.PRET_PICKLE_FILE = '{assets_dir + pkl_filename}';"
-                            f"window.PRET_REMOTE_IMPORTS = {remote_imports};"
-                            "</script>" + base_html
-                        )
+                        html = html.replace(code_block["id"], str(num_chunks))
+                        remote_imports.update([n for _, n in entries if n is not None])
                         self.assets.update(assets)
                         self.entries.update(entries)
+                        num_chunks += 1
             page_code_blocks.clear()
+
+        html = (
+            "<script>"
+            f"window.PRET_PICKLE_FILE = '{assets_dir + pkl_filename}';"
+            f"window.PRET_REMOTE_IMPORTS = {str(list(remote_imports))};"
+            "</script>" + html
+        )
 
         clear_shared_marshaler()
 
