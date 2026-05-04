@@ -229,6 +229,7 @@ class PretSnippetRendererPlugin(BasePlugin):
 
         remote_imports = set()
         num_chunks = 0
+        bundle_globals = ""
         with tempfile.TemporaryDirectory() as tmp_dir:
             env = {}
             for block_idx, code_block in enumerate(page_code_blocks):
@@ -244,8 +245,23 @@ class PretSnippetRendererPlugin(BasePlugin):
                     with build([result], mode="federated") as (
                         assets,
                         entries,
-                        pkl_filename,
+                        bundle_filename,
                     ):
+                        if isinstance(assets[bundle_filename], bytes):
+                            bundle_code_filename = str(
+                                Path(bundle_filename).with_suffix(".code.js")
+                            )
+                            bundle_globals = (
+                                f"window.PRET_BUNDLE_BYTES_FILE = "
+                                f"'{assets_dir + bundle_filename}';"
+                                f"window.PRET_BUNDLE_CODE_FILE = "
+                                f"'{assets_dir + bundle_code_filename}';"
+                            )
+                        else:
+                            bundle_globals = (
+                                f"window.PRET_PICKLE_FILE = "
+                                f"'{assets_dir + bundle_filename}';"
+                            )
                         html = html.replace(code_block["id"], str(num_chunks))
                         remote_imports.update([n for _, n in entries if n is not None])
                         self.assets.update(assets)
@@ -255,7 +271,7 @@ class PretSnippetRendererPlugin(BasePlugin):
 
         html = (
             "<script>"
-            f"window.PRET_PICKLE_FILE = '{assets_dir + pkl_filename}';"
+            f"{bundle_globals}"
             f"window.PRET_REMOTE_IMPORTS = {str(list(remote_imports))};"
             "</script>" + html
         )
@@ -294,6 +310,8 @@ class PretSnippetRendererPlugin(BasePlugin):
             os.makedirs(dest_path.parent, exist_ok=True)
             if isinstance(file, Path):
                 shutil.copy(file, dest_path)
+            elif isinstance(file, bytes):
+                dest_path.write_bytes(file)
             else:
                 dest_path.write_text(file)
         utils.copy_file(
