@@ -27,6 +27,7 @@ dependencies = [
     "mkdocs-section-index==0.3.4",
     "mkdocstrings-python @ git+https://github.com/percevalw/mkdocstrings-python.git@main#egg=mkdocstrings-python",
     "mkdocstrings<1",
+    "pymdown-extensions<12.2",  # 12.2 requires an md argument in Highlight that mkdocstrings<1 does not pass
     "nbformat",
     "pybtex~=0.25.1",
     "regex",
